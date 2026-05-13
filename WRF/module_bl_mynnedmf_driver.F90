@@ -121,22 +121,6 @@
  implicit none
 !------------------------------------------------------------------- 
 
-!smoke/chem: disclaimer: all smoke-related variables are still
-!considered under development in CCPP. Until that work is
-!completed, these flags/arrays must be kept hard-coded as is.
-#if (WRF_CHEM == 1)
- logical, intent(in) :: mix_chem
- integer, intent(in) :: nchem, ndvel, kdvel, num_vert_mix
- logical, parameter ::                                  &
-         enh_mix    =.false.
-#else
- logical, parameter ::                                  &
-         mix_chem   =.false.,                           &
-         enh_mix    =.false.
- integer, parameter :: nchem=2, ndvel=2, kdvel=1,       &
-          num_vert_mix = 1
-#endif
-
 ! NAMELIST OPTIONS (INPUT):
  logical, intent(in) ::                                 &
          bl_mynn_tkeadvect,                             &
@@ -226,17 +210,34 @@
        dqni1,dqnc1,dqnwfa1,dqnifa1,dqnbca1,dozone1
 
 !smoke/chem arrays - no if-defs in module_bl_mynnedmf.F90, so must define arrays
+!smoke/chem: disclaimer: all smoke-related variables are still
+!considered under development in CCPP. Until that work is
+!completed, these flags/arrays must be kept hard-coded as is.
 #if (WRF_CHEM == 1)
+ logical, intent(in) :: mix_chem
+ integer, intent(in) :: nchem, ndvel, kdvel, num_vert_mix
+ logical, parameter  :: enh_mix=.false.
  real(kind_phys), dimension(ims:ime,kms:kme,jms:jme,nchem), intent(inout) :: chem3d
  real(kind_phys), dimension(ims:ime,kdvel,jms:jme, ndvel),  intent(in)    :: vd3d
- real(kind_phys), dimension(kms:kme,nchem)  :: chem, settle1
- real(kind_phys), dimension(ndvel)          :: vd
- real(kind_phys), dimension(ims:ime,jms:jme):: frp_mean, emis_ant_no
 #else
+ logical, parameter  :: mix_chem=.false.
+ logical, parameter  :: enh_mix=.false.
+ integer, parameter  :: nchem=2, ndvel=2, kdvel=1, num_vert_mix = 1
+#endif
  real(kind_phys), dimension(kms:kme,nchem)  :: chem, settle1
  real(kind_phys), dimension(ndvel)          :: vd
  real(kind_phys), dimension(ims:ime,jms:jme):: frp_mean, emis_ant_no
-#endif
+!from MPAS driver:
+! logical,intent(in),optional:: mix_chem
+! logical::mix_chem1
+! integer,intent(in),optional:: nchem,ndvel
+! integer::nchem1,ndvel1
+! real(kind=kind_phys),intent(in),dimension(:,:),  optional:: frp_mean,emis_ant_no
+! real(kind=kind_phys),intent(in),dimension(:,:,:),optional:: vd3d
+! real(kind=kind_phys),intent(inout),dimension(:,:,:,:),optional:: chem3d,settle3d
+! real(kind=kind_phys),allocatable,dimension(:):: vd1
+! real(kind=kind_phys),allocatable,dimension(:,:):: chem1,settle1 
+
 !Generic scalar array support (not yet connected to WRF, but any new scalars that need to be mixed
 !(locally and nonlocally) will need to come through this variables with bl_mynn_mixscalars=1.
  integer, parameter :: nscalars=1
@@ -732,7 +733,7 @@
       endif
 
 #if (WRF_CHEM == 1)
-      if (mix_chem) then
+      if (mix_chem .and. present(chem3d)) then
          do n = 1,nchem
             do k = kts,kte
                chem3d(i,k,j,n) = max(1.e-12, chem(k,n))
