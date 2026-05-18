@@ -673,6 +673,9 @@
           enddo
        enddo
     endif
+    deallocate(vd1)
+    deallocate(chem1)
+    deallocate(settle1)
 
  enddo !i
  enddo !j
